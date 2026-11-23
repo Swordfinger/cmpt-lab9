@@ -31,11 +31,40 @@ struct client_info {
   int client_id;
 };
 
-void *handle_client(void *arg) {
+void *handle_client(void *arg) 
+{
   struct client_info *client = (struct client_info *)arg;
 
-  // TODO: print the message received from client
-  // TODO: increase total_message_count per message
+  int cfd = client->cfd;
+  int client_id = client->client_id;
+
+  free(client);
+
+  char buf[BUF_SIZE + 1];
+  ssize_t num_read;
+
+  while ((num_read = read(cfd, buf, BUF_SIZE)) > 0) 
+  {
+    buf[num_read] = '\0';
+
+    pthread_mutex_lock(&count_mutex);
+
+    total_message_count++;
+
+    printf("Msg #%4d; Client ID %d: %s", total_message_count, client_id, buf);
+
+    if (buf[num_read - 1] != '\n') 
+      printf("\n");
+
+    pthread_mutex_unlock(&count_mutex);
+  }
+
+  if (num_read == -1)
+    perror("read");
+
+  close(cfd);
+
+  printf("Ending thread for client %d\n", client_id);
 
   return NULL;
 }
@@ -61,18 +90,48 @@ int main() {
   if (listen(sfd, LISTEN_BACKLOG) == -1) {
     handle_error("listen");
   }
-
-  for (;;) {
+  
+  for (;;) 
+  {
     int cfd = accept(sfd, NULL, NULL);
 
-    if (cfd == -1) {
-        perror("accept");
-        continue;
+    if (cfd == -1) 
+    {
+      perror("accept");
+      continue;
     }
 
-    printf("New connection on socket FD %d\n", cfd);
+    pthread_mutex_lock(&client_id_mutex);
 
-    close(cfd);
+    int client_id = client_id_counter++;
+
+    pthread_mutex_unlock(&client_id_mutex);
+
+    struct client_info *client = malloc(sizeof(struct client_info));
+
+    if (client == NULL) 
+    {
+      perror("malloc");
+      close(cfd);
+      continue;
+    }
+
+    client->cfd = cfd;
+    client->client_id = client_id;
+
+    printf("New client created! ID %d on socket FD %d\n", client_id, cfd);
+
+    pthread_t thread;
+
+    if (pthread_create(&thread, NULL, handle_client, client) != 0) 
+    {
+      fprintf(stderr, "pthread_create: %s\n", strerror(result));
+      free(client);
+      close(cfd);
+      continue;
+    }
+
+    pthread_detach(thread);
   }
 
   if (close(sfd) == -1) {
