@@ -1,3 +1,27 @@
+/*
+Questions to answer at top of client.c:
+(You should not need to change the code in client.c)
+
+1. What is the address of the server it is trying to connect to (IP address and port number).
+
+  IP Address: 127.0.0.1
+  Port Number: 8000
+
+2. Is it UDP or TCP? How do you know?
+
+  It's TCP because the socket is created using SOCK_STREAM in socket(AF_INET, SOCK_STREAM, 0).
+
+3. The client is going to send some data to the server. Where does it get this data from? How can you tell in the code?
+
+  The data comes from standard input which is the stdin. The program uses read(STDIN_FILENO, buf, BUF_SIZE) to read input into the buffer, then uses write() to send it to the server.
+
+4. How does the client program end? How can you tell that in the code?
+
+  The client exits the while loop when read() returns 1 or 0 bytes. It then closes the socket using close(sfd) and exits using exit(EXIT_SUCCESS). If read() returns -1, the program exits with an error.
+
+*/
+
+
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
