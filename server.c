@@ -125,7 +125,7 @@ int main() {
 
     if (pthread_create(&thread, NULL, handle_client, client) != 0) 
     {
-      fprintf(stderr, "pthread_create: %s\n", strerror(result));
+      fprintf(stderr, "pthread_create failed\n");
       free(client);
       close(cfd);
       continue;
