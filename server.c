@@ -63,9 +63,16 @@ int main() {
   }
 
   for (;;) {
-    // TODO: create a new thread when a new connection is encountered
-    // TODO: call handle_client() when launching a new thread, and provide
-    // client_info
+    int cfd = accept(sfd, NULL, NULL);
+
+    if (cfd == -1) {
+        perror("accept");
+        continue;
+    }
+
+    printf("New connection on socket FD %d\n", cfd);
+
+    close(cfd);
   }
 
   if (close(sfd) == -1) {
