@@ -31,7 +31,8 @@ struct client_info {
   int client_id;
 };
 
-void *handle_client(void *arg) 
+
+void *handle_client(void *arg)
 {
   struct client_info *client = (struct client_info *)arg;
 
@@ -40,27 +41,53 @@ void *handle_client(void *arg)
 
   free(client);
 
-  char buf[BUF_SIZE + 1];
+  char buf[BUF_SIZE];
+  char message[BUF_SIZE + 1];
+  size_t message_len = 0;
   ssize_t num_read;
 
-  while ((num_read = read(cfd, buf, BUF_SIZE)) > 0) 
+  while ((num_read = read(cfd, buf, BUF_SIZE)) > 0)
   {
-    buf[num_read] = '\0';
+    for (ssize_t i = 0; i < num_read; i++)
+    {
+      if (buf[i] == '\n')
+      {
+        message[message_len] = '\0';
+
+        pthread_mutex_lock(&count_mutex);
+
+        total_message_count++;
+
+        printf("Msg #%4d; Client ID %d: %s\n",
+               total_message_count, client_id, message);
+
+        pthread_mutex_unlock(&count_mutex);
+
+        message_len = 0;
+      }
+      else if (message_len < BUF_SIZE)
+      {
+        message[message_len++] = buf[i];
+      }
+    }
+  }
+
+  if (num_read == -1)
+    perror("read");
+
+  if (message_len > 0)
+  {
+    message[message_len] = '\0';
 
     pthread_mutex_lock(&count_mutex);
 
     total_message_count++;
 
-    printf("Msg #%4d; Client ID %d: %s", total_message_count, client_id, buf);
-
-    if (buf[num_read - 1] != '\n') 
-      printf("\n");
+    printf("Msg #%4d; Client ID %d: %s\n",
+           total_message_count, client_id, message);
 
     pthread_mutex_unlock(&count_mutex);
   }
-
-  if (num_read == -1)
-    perror("read");
 
   close(cfd);
 
@@ -68,6 +95,7 @@ void *handle_client(void *arg)
 
   return NULL;
 }
+
 
 int main() {
   struct sockaddr_in addr;
